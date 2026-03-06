@@ -533,11 +533,14 @@
     <button class="btn-start" id="startBtn" onclick="startGame()" disabled>Start Game</button>
 
     <div class="intro-leaderboard" id="introLB">
-      <h3>Leaderboard</h3>
+      <h3>Leaderboard <span style="font-size:0.7rem;color:#556;font-weight:400;letter-spacing:0;">(shared across all players)</span></h3>
       <table class="lb-table">
         <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
         <tbody id="introLBBody"></tbody>
       </table>
+      <div style="text-align:center;margin-top:10px;">
+        <button onclick="refreshLB()" style="background:none;border:1px solid #334;color:#8899cc;font-family:'Bitter',serif;font-size:0.8rem;padding:6px 16px;border-radius:6px;cursor:pointer;letter-spacing:1px;">↻ Refresh</button>
+      </div>
     </div>
   </div>
 </div>
@@ -690,40 +693,78 @@ let correctCount = 0;
 let currentClue = null;
 let isFinalJeopardy = false;
 let gameOver = false;
-let currentGameId = null;
 const usedCells = new Set();
 
-// ===================== LEADERBOARD =====================
-function getLeaderboard() {
-  try { return JSON.parse(localStorage.getItem('gza_jeopardy_lb') || '[]'); } catch { return []; }
+// ===================== LEADERBOARD (Google Sheets) =====================
+const SHEET_URL = 'https://script.google.com/a/macros/iurb.com/s/AKfycbywOyEL6sSpuMFkGpx6Jh6v4PyQMI9ampgDVa30wiO3-svnq6mKB5ETtAalNZPlPGUx/exec';
+let sharedLeaderboard = [];
+let lbLoading = false;
+
+// Fetch leaderboard from Google Sheet
+async function fetchLeaderboard() {
+  lbLoading = true;
+  try {
+    const resp = await fetch(SHEET_URL);
+    if (resp.ok) {
+      sharedLeaderboard = await resp.json();
+    }
+  } catch (err) {
+    console.log('Sheet fetch failed, using local cache:', err);
+    // Fallback to localStorage
+    try { sharedLeaderboard = JSON.parse(localStorage.getItem('gza_jeopardy_lb') || '[]'); } catch { sharedLeaderboard = []; }
+  }
+  lbLoading = false;
+  return sharedLeaderboard;
 }
-function saveLeaderboard(lb) {
-  try { localStorage.setItem('gza_jeopardy_lb', JSON.stringify(lb)); } catch {}
+
+// Post score to Google Sheet
+async function postScore(name, finalScore, correct, total) {
+  const payload = { name, score: finalScore, correct, total };
+  // Save locally as backup
+  try {
+    const lb = JSON.parse(localStorage.getItem('gza_jeopardy_lb') || '[]');
+    lb.push({ ...payload, date: new Date().toLocaleDateString() });
+    lb.sort((a,b) => b.score - a.score);
+    if (lb.length > 15) lb.length = 15;
+    localStorage.setItem('gza_jeopardy_lb', JSON.stringify(lb));
+  } catch {}
+  // Post to Google Sheet
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    // Re-fetch to get updated shared leaderboard
+    await new Promise(r => setTimeout(r, 1500));
+    await fetchLeaderboard();
+  } catch (err) {
+    console.log('Sheet post failed:', err);
+  }
 }
-function addToLeaderboard(name, finalScore, correct, total) {
-  const lb = getLeaderboard();
-  const id = Date.now().toString(36);
-  lb.push({ id, name, score: finalScore, correct, total, date: new Date().toLocaleDateString() });
-  lb.sort((a,b) => b.score - a.score);
-  if (lb.length > 15) lb.length = 15;
-  saveLeaderboard(lb);
-  currentGameId = id;
-  return lb;
-}
-function renderLeaderboard(tbodyId, highlightId) {
+
+function getLeaderboard() { return sharedLeaderboard; }
+
+function renderLeaderboard(tbodyId, highlightName) {
   const lb = getLeaderboard();
   const tbody = document.getElementById(tbodyId);
+  if (lbLoading) {
+    tbody.innerHTML = '<tr><td colspan="3" class="lb-empty">Loading scores...</td></tr>';
+    return;
+  }
   if (!lb.length) {
     tbody.innerHTML = '<tr><td colspan="3" class="lb-empty">No scores yet — be the first!</td></tr>';
     return;
   }
   const rankClass = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-  tbody.innerHTML = lb.slice(0, 10).map((e, i) =>
-    `<tr class="${highlightId && e.id === highlightId ? 'lb-you' : ''}">` +
+  tbody.innerHTML = lb.slice(0, 10).map((e, i) => {
+    const isYou = highlightName && e.name === highlightName && e.score == score;
+    return `<tr class="${isYou ? 'lb-you' : ''}">` +
     `<td class="lb-rank ${rankClass(i)}">${i+1}</td>` +
-    `<td>${esc(e.name)}${highlightId && e.id === highlightId ? ' ◀' : ''}</td>` +
-    `<td>$${e.score.toLocaleString()}</td></tr>`
-  ).join('');
+    `<td>${esc(e.name)}${isYou ? ' ◀' : ''}</td>` +
+    `<td>$${Number(e.score).toLocaleString()}</td></tr>`;
+  }).join('');
 }
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
@@ -822,7 +863,7 @@ function startGame() {
 
 function resetGameState() {
   score=0; strikes=0; answeredCount=0; correctCount=0;
-  gameOver=false; isFinalJeopardy=false; currentGameId=null;
+  gameOver=false; isFinalJeopardy=false;
   usedCells.clear();
   document.getElementById('finalBtn').classList.remove('show');
 }
@@ -941,10 +982,8 @@ function revealAnswer() {
 function closeModal() { document.getElementById('overlay').classList.remove('active'); }
 
 // ===================== GAME OVER =====================
-function endGame(completed) {
+async function endGame(completed) {
   gameOver=true;
-  addToLeaderboard(playerName,score,correctCount,answeredCount);
-  renderLeaderboard('gameOverLBBody',currentGameId);
 
   const modal=document.getElementById('gameOverModal');
   const title=document.getElementById('gameOverTitle');
@@ -958,7 +997,14 @@ function endGame(completed) {
   }
   document.getElementById('finalScore').textContent=`$${score.toLocaleString()}`;
   document.getElementById('finalCorrect').textContent=`${correctCount} correct out of ${answeredCount} answered`;
+
+  // Show game over immediately with loading state
+  renderLeaderboard('gameOverLBBody');
   document.getElementById('gameOverOverlay').classList.add('active');
+
+  // Post score and refresh leaderboard
+  await postScore(playerName, score, correctCount, answeredCount);
+  renderLeaderboard('gameOverLBBody', playerName);
 }
 
 function restartGame() {
@@ -966,11 +1012,12 @@ function restartGame() {
   resetGameState(); buildBoard(); updateUI();
 }
 
-function backToIntro() {
+async function backToIntro() {
   document.getElementById('gameOverOverlay').classList.remove('active');
   document.getElementById('gameScreen').classList.remove('active');
   document.getElementById('introScreen').classList.remove('hidden');
   nameInput.value=playerName; startBtn.disabled=false;
+  await fetchLeaderboard();
   renderLeaderboard('introLBBody');
 }
 
@@ -982,6 +1029,13 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+// Refresh leaderboard
+async function refreshLB() {
+  renderLeaderboard('introLBBody');
+  await fetchLeaderboard();
+  renderLeaderboard('introLBBody');
+}
+
 // Splash screen
 document.getElementById('splashScreen').addEventListener('click', () => {
   document.getElementById('splashScreen').classList.add('hidden');
@@ -989,8 +1043,12 @@ document.getElementById('splashScreen').addEventListener('click', () => {
   document.getElementById('playerNameInput').focus();
 });
 
-// Init
-renderLeaderboard('introLBBody');
+// Init — fetch shared leaderboard from Google Sheet
+(async function init() {
+  renderLeaderboard('introLBBody'); // show loading state
+  await fetchLeaderboard();
+  renderLeaderboard('introLBBody');
+})();
 </script>
 </body>
 </html>
