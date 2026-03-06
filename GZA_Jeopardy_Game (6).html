@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GZA Jeopardy!</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Bitter:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --board-blue: #060CE9;
+    --board-dark: #000088;
+    --cell-bg: #060CE9;
+    --gold: #D7A94B;
+    --gold-bright: #FFD700;
+    --white: #FFFFFF;
+    --bg: #0a0a2e;
+    --correct: #2ecc40;
+    --wrong: #e74c3c;
+    --shadow: rgba(0,0,0,0.5);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Oswald', sans-serif;
+    background: var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== SPLASH SCREEN ===== */
+  .splash-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    background: radial-gradient(ellipse at 50% 35%, #0d0d5e 0%, #060620 70%);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .splash-screen.hidden { display: none; }
+  .splash-card {
+    max-width: 750px;
+    width: 100%;
+    text-align: center;
+    animation: splashEntry 1s ease-out;
+  }
+  @keyframes splashEntry {
+    0% { opacity: 0; transform: scale(0.85); }
+    60% { opacity: 1; transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  .splash-logo-wrap {
+    width: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(215,169,75,0.2), 0 0 120px rgba(6,12,233,0.3);
+    animation: splashGlow 3s ease-in-out infinite alternate;
+  }
+  @keyframes splashGlow {
+    0% { box-shadow: 0 0 60px rgba(215,169,75,0.15), 0 0 120px rgba(6,12,233,0.25); }
+    100% { box-shadow: 0 0 80px rgba(215,169,75,0.3), 0 0 150px rgba(6,12,233,0.4); }
+  }
+  .splash-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .splash-prompt {
+    margin-top: 32px;
+    font-family: 'Bitter', serif;
+    font-size: 1.05rem;
+    color: #8899cc;
+    letter-spacing: 2px;
+    animation: promptPulse 2s ease-in-out infinite;
+  }
+  @keyframes promptPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* Floating particles on splash */
+  .splash-screen::before,
+  .splash-screen::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(215,169,75,0.08);
+    animation: floatParticle 8s ease-in-out infinite;
+  }
+  .splash-screen::before {
+    width: 300px; height: 300px;
+    top: -80px; left: -80px;
+    animation-duration: 10s;
+  }
+  .splash-screen::after {
+    width: 200px; height: 200px;
+    bottom: -60px; right: -60px;
+    animation-duration: 7s;
+    animation-delay: 2s;
+  }
+  @keyframes floatParticle {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(30px, 20px) scale(1.05); }
+    50% { transform: translate(-10px, 40px) scale(0.95); }
+    75% { transform: translate(20px, -10px) scale(1.02); }
+  }
+
+  /* ===== INTRO SCREEN ===== */
+  .intro-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    background: radial-gradient(ellipse at 50% 30%, #0d0d5e 0%, #0a0a2e 70%);
+  }
+  .intro-card {
+    max-width: 680px;
+    width: 100%;
+    text-align: center;
+    animation: introFade 0.8s ease-out;
+  }
+  @keyframes introFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+  .intro-logo {
+    font-size: clamp(2.8rem, 7vw, 4.5rem);
+    font-weight: 700;
+    color: var(--gold-bright);
+    text-shadow: 3px 3px 8px var(--shadow), 0 0 50px rgba(215,169,75,0.25);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .intro-edition {
+    font-family: 'Bitter', serif;
+    font-size: 1rem;
+    color: #8899cc;
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+
+  .intro-rules {
+    background: rgba(6,12,233,0.25);
+    border: 1px solid rgba(215,169,75,0.2);
+    border-radius: 14px;
+    padding: 28px 32px;
+    text-align: left;
+    margin-bottom: 32px;
+  }
+  .intro-rules h2 {
+    font-size: 1.15rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .intro-rules ul { list-style: none; padding: 0; }
+  .intro-rules li {
+    font-family: 'Bitter', serif;
+    font-size: 0.95rem;
+    color: #c0ccee;
+    line-height: 1.6;
+    padding: 6px 0 6px 28px;
+    position: relative;
+  }
+  .intro-rules li::before {
+    content: '▸';
+    position: absolute;
+    left: 6px;
+    color: var(--gold);
+    font-size: 0.85rem;
+  }
+  .rule-highlight {
+    color: var(--gold-bright);
+    font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+  }
+
+  .name-entry { margin-bottom: 28px; }
+  .name-entry label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .name-entry input {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    padding: 14px 22px;
+    border: 3px solid var(--gold);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.4);
+    color: var(--gold-bright);
+    text-align: center;
+    width: 100%;
+    max-width: 340px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 1px;
+  }
+  .name-entry input:focus {
+    border-color: var(--gold-bright);
+    box-shadow: 0 0 20px rgba(215,169,75,0.3);
+  }
+  .name-entry input::placeholder { color: #556688; font-weight: 400; }
+
+  .btn-start {
+    background: linear-gradient(135deg, var(--gold), #b8860b);
+    color: #111;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding: 16px 52px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    box-shadow: 0 4px 30px rgba(215,169,75,0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-start:hover { transform: scale(1.06); box-shadow: 0 4px 40px rgba(215,169,75,0.55); }
+  .btn-start:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+  .intro-leaderboard {
+    margin-top: 36px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(215,169,75,0.15);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .intro-leaderboard h3 {
+    font-size: 0.95rem;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .lb-table { width: 100%; border-collapse: collapse; }
+  .lb-table th {
+    font-size: 0.7rem; color: #667;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-align: left;
+  }
+  .lb-table th:last-child { text-align: right; }
+  .lb-table td {
+    font-family: 'Bitter', serif;
+    font-size: 0.9rem;
+    padding: 8px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: #c0ccee;
+  }
+  .lb-table td:last-child { text-align: right; color: var(--gold-bright); font-family: 'Oswald', sans-serif; font-weight: 600; }
+  .lb-rank { color: var(--gold); font-family: 'Oswald', sans-serif; font-weight: 700; width: 30px; }
+  .lb-rank.gold { color: var(--gold-bright); }
+  .lb-rank.silver { color: #C0C0C0; }
+  .lb-rank.bronze { color: #cd7f32; }
+  .lb-empty { text-align: center !important; color: #445 !important; font-style: italic; padding: 18px 8px !important; }
+  .lb-you { background: rgba(215,169,75,0.1); }
+
+  /* ===== GAME SCREEN ===== */
+  .game-screen { display: none; }
+  .game-screen.active { display: block; }
+  .intro-screen.hidden { display: none; }
+
+  .header { text-align: center; padding: 18px 20px 6px; }
+  .header h1 {
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    font-weight: 700; color: var(--gold-bright);
+    text-shadow: 3px 3px 6px var(--shadow), 0 0 30px rgba(215,169,75,0.3);
+    letter-spacing: 4px; text-transform: uppercase;
+  }
+  .header .player-name-display {
+    font-family: 'Bitter', serif;
+    font-size: 0.95rem; color: #8899cc; margin-top: 2px;
+  }
+  .header .player-name-display strong { color: var(--gold); }
+
+  .scoreboard {
+    display: flex; justify-content: center; gap: 36px;
+    padding: 10px 20px; flex-wrap: wrap;
+  }
+  .stat { display: flex; align-items: center; gap: 8px; }
+  .stat-label { color: #8899cc; font-weight: 400; font-size: 0.95rem; }
+  .stat-value { font-weight: 700; font-size: 1.35rem; color: var(--gold-bright); min-width: 55px; text-align: center; }
+  .strikes-container { display: flex; gap: 6px; }
+  .strike {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid #e74c3c44;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; transition: all 0.3s;
+  }
+  .strike.active {
+    background: var(--wrong); border-color: var(--wrong);
+    box-shadow: 0 0 10px rgba(231,76,60,0.5); color: white;
+  }
+  .strike.active::after { content: '✕'; }
+
+  .board-wrapper { max-width: 1100px; margin: 8px auto; padding: 0 12px; }
+  .board {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 5px; background: #000; border: 4px solid #000;
+    border-radius: 8px; padding: 5px;
+  }
+  .cat-header {
+    background: var(--board-blue); padding: 12px 5px;
+    text-align: center; font-size: clamp(0.55rem, 1.15vw, 0.82rem);
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    line-height: 1.3; color: var(--white);
+    text-shadow: 2px 2px 4px var(--shadow);
+    display: flex; align-items: center; justify-content: center;
+    min-height: 65px; border-radius: 4px;
+  }
+  .cell {
+    background: var(--board-blue); padding: 8px;
+    text-align: center; font-weight: 700;
+    font-size: clamp(1.1rem, 2.3vw, 1.7rem);
+    color: var(--gold-bright); text-shadow: 2px 2px 4px var(--shadow);
+    cursor: pointer; border-radius: 4px; min-height: 54px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+    user-select: none;
+  }
+  .cell:hover:not(.used) {
+    background: #1a1aff; transform: scale(1.04);
+    box-shadow: 0 0 16px rgba(6,12,233,0.6);
+  }
+  .cell.used { background: #0a0a3a; color: #222255; cursor: default; text-shadow: none; }
+
+  /* --- MODAL --- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px; animation: fadeIn 0.25s;
+  }
+  .overlay.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--board-blue); border: 5px solid var(--gold);
+    border-radius: 16px; max-width: 680px; width: 100%;
+    padding: 36px 32px; text-align: center;
+    box-shadow: 0 0 60px rgba(6,12,233,0.6), 0 0 120px rgba(215,169,75,0.15);
+    animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .modal-category { font-size: 0.8rem; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+  .modal-value { font-size: 1.2rem; color: var(--gold-bright); margin-bottom: 18px; }
+  .modal-clue {
+    font-family: 'Bitter', serif;
+    font-size: clamp(1.05rem, 2.3vw, 1.4rem);
+    font-weight: 400; line-height: 1.55; color: var(--white);
+    text-shadow: 1px 1px 3px var(--shadow); margin-bottom: 24px;
+  }
+
+  .answer-input-area { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .answer-input-area input {
+    font-family: 'Bitter', serif; font-size: 1.05rem;
+    padding: 11px 16px; border: 2px solid var(--gold);
+    border-radius: 8px; background: rgba(0,0,0,0.35);
+    color: var(--white); outline: none; width: 100%; max-width: 400px;
+    text-align: center; transition: border-color 0.2s;
+  }
+  .answer-input-area input:focus { border-color: var(--gold-bright); box-shadow: 0 0 12px rgba(215,169,75,0.3); }
+  .answer-input-area input::placeholder { color: #7788aa; }
+
+  .btn {
+    font-family: 'Oswald', sans-serif; font-size: 0.95rem;
+    font-weight: 600; padding: 11px 26px; border: none;
+    border-radius: 8px; cursor: pointer; text-transform: uppercase;
+    letter-spacing: 1px; transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .btn:hover { transform: scale(1.05); }
+  .btn-submit { background: var(--gold); color: #111; }
+  .btn-reveal { background: #334; color: var(--white); border: 1px solid #556; }
+  .btn-back { background: #334; color: var(--white); border: 1px solid #556; margin-top: 8px; }
+
+  .result-area { margin-top: 14px; min-height: 50px; }
+  .result-text { font-size: 1.05rem; font-weight: 600; padding: 8px; border-radius: 8px; animation: fadeIn 0.3s; }
+  .result-text.correct { color: var(--correct); }
+  .result-text.wrong { color: var(--wrong); }
+  .correct-answer { font-family: 'Bitter', serif; color: var(--gold-bright); font-size: 1.1rem; margin-top: 8px; line-height: 1.4; }
+
+  .final-jeopardy-btn {
+    display: none; margin: 18px auto;
+    background: linear-gradient(135deg, var(--gold), #b8860b);
+    color: #111; font-size: 1.15rem; padding: 14px 38px;
+    border-radius: 12px; border: none; font-family: 'Oswald', sans-serif;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    cursor: pointer; box-shadow: 0 0 30px rgba(215,169,75,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .final-jeopardy-btn:hover { transform: scale(1.06); box-shadow: 0 0 40px rgba(215,169,75,0.6); }
+  .final-jeopardy-btn.show { display: block; }
+
+  .wager-area { margin-bottom: 18px; }
+  .wager-area label { font-size: 0.9rem; color: var(--gold); display: block; margin-bottom: 8px; }
+  .wager-area input {
+    font-family: 'Bitter', serif; font-size: 1.05rem;
+    padding: 10px 14px; border: 2px solid var(--gold);
+    border-radius: 8px; background: rgba(0,0,0,0.35);
+    color: var(--gold-bright); width: 140px; text-align: center; outline: none;
+  }
+
+  /* --- GAME OVER --- */
+  .game-over-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+    display: none; align-items: center; justify-content: center;
+    z-index: 2000; padding: 20px;
+  }
+  .game-over-overlay.active { display: flex; }
+  .game-over-modal {
+    text-align: center;
+    animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 500px; width: 100%;
+  }
+  .game-over-modal h2 {
+    font-size: 2.6rem; color: var(--wrong);
+    text-shadow: 0 0 40px rgba(231,76,60,0.5); margin-bottom: 8px;
+  }
+  .game-over-modal .final-score { font-size: 1.6rem; color: var(--gold-bright); margin-bottom: 6px; }
+  .game-over-modal .final-correct { font-size: 0.95rem; color: #8899cc; margin-bottom: 24px; }
+  .game-over-modal.winner h2 { color: var(--gold-bright); text-shadow: 0 0 40px rgba(215,169,75,0.5); }
+
+  .game-over-lb {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(215,169,75,0.15);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;
+  }
+  .game-over-lb h3 {
+    font-size: 0.85rem; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;
+  }
+
+  .btn-restart {
+    background: linear-gradient(135deg, var(--gold), #b8860b);
+    color: #111; font-size: 1.05rem; padding: 13px 34px;
+    border-radius: 10px; border: none; font-family: 'Oswald', sans-serif;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    cursor: pointer; transition: transform 0.2s; margin: 0 6px;
+  }
+  .btn-restart:hover { transform: scale(1.05); }
+  .btn-restart.secondary { background: #334; color: var(--white); border: 1px solid #556; box-shadow: none; }
+
+  @media (max-width: 700px) {
+    .board { gap: 3px; padding: 3px; }
+    .cat-header { padding: 7px 3px; min-height: 50px; font-size: 0.5rem; }
+    .cell { min-height: 40px; font-size: 0.95rem; }
+    .modal { padding: 24px 18px; }
+    .scoreboard { gap: 16px; }
+    .intro-rules { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ======== SPLASH SCREEN ======== -->
+<div class="splash-screen" id="splashScreen">
+  <div class="splash-card">
+    <div class="splash-logo-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" class="splash-svg">
+        <defs>
+          <radialGradient id="bgGrad" cx="50%" cy="40%" r="65%"><stop offset="0%" stop-color="#0d0d6e"/><stop offset="100%" stop-color="#060628"/></radialGradient>
+          <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#FFE680"/><stop offset="35%" stop-color="#FFD700"/><stop offset="65%" stop-color="#D4A520"/><stop offset="100%" stop-color="#B8860B"/></linearGradient>
+          <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFF1A8"/><stop offset="50%" stop-color="#FFD700"/><stop offset="100%" stop-color="#C99A2E"/></linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <clipPath id="bgClip"><rect x="0" y="0" width="800" height="500" rx="20"/></clipPath>
+        </defs>
+        <rect width="800" height="500" rx="20" fill="url(#bgGrad)"/>
+        <g opacity="0.06" clip-path="url(#bgClip)">
+          <line x1="0" y1="100" x2="800" y2="100" stroke="#FFD700" stroke-width="0.5"/><line x1="0" y1="200" x2="800" y2="200" stroke="#FFD700" stroke-width="0.5"/>
+          <line x1="0" y1="300" x2="800" y2="300" stroke="#FFD700" stroke-width="0.5"/><line x1="0" y1="400" x2="800" y2="400" stroke="#FFD700" stroke-width="0.5"/>
+          <line x1="160" y1="0" x2="160" y2="500" stroke="#FFD700" stroke-width="0.5"/><line x1="320" y1="0" x2="320" y2="500" stroke="#FFD700" stroke-width="0.5"/>
+          <line x1="480" y1="0" x2="480" y2="500" stroke="#FFD700" stroke-width="0.5"/><line x1="640" y1="0" x2="640" y2="500" stroke="#FFD700" stroke-width="0.5"/>
+        </g>
+        <ellipse cx="400" cy="235" rx="320" ry="200" fill="none" stroke="#FFD700" stroke-width="0.8" opacity="0.12"/>
+        <rect x="200" y="52" width="400" height="3" rx="1.5" fill="url(#goldGrad)" opacity="0.6"/>
+        <text x="400" y="108" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="42" font-weight="bold" letter-spacing="14" fill="url(#goldShine)" filter="url(#glow)">GZA</text>
+        <text x="400" y="200" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="90" font-weight="bold" letter-spacing="6" fill="url(#goldGrad)" filter="url(#softGlow)">PLANNING</text>
+        <g opacity="0.7"><line x1="140" y1="222" x2="310" y2="222" stroke="url(#goldGrad)" stroke-width="2"/><line x1="490" y1="222" x2="660" y2="222" stroke="url(#goldGrad)" stroke-width="2"/><circle cx="400" cy="222" r="5" fill="#FFD700"/><circle cx="340" cy="222" r="2.5" fill="#D4A520"/><circle cx="460" cy="222" r="2.5" fill="#D4A520"/></g>
+        <text x="400" y="300" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="78" font-weight="bold" font-style="italic" letter-spacing="3" fill="url(#goldGrad)" filter="url(#softGlow)">JEOPARDY!</text>
+        <g transform="translate(400,370)" opacity="0.5" filter="url(#glow)">
+          <rect x="-8" y="-40" width="16" height="40" fill="#FFD700" rx="1"/><rect x="-5" y="-35" width="3" height="4" fill="#0d0d6e" rx="0.5"/><rect x="2" y="-35" width="3" height="4" fill="#0d0d6e" rx="0.5"/>
+          <rect x="-5" y="-28" width="3" height="4" fill="#0d0d6e" rx="0.5"/><rect x="2" y="-28" width="3" height="4" fill="#0d0d6e" rx="0.5"/><rect x="-5" y="-21" width="3" height="4" fill="#0d0d6e" rx="0.5"/><rect x="2" y="-21" width="3" height="4" fill="#0d0d6e" rx="0.5"/>
+          <rect x="-30" y="-28" width="14" height="28" fill="#D4A520" rx="1"/><rect x="-28" y="-24" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="-22" y="-24" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="-28" y="-18" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="-22" y="-18" width="3" height="3" fill="#0d0d6e" rx="0.5"/>
+          <rect x="16" y="-32" width="14" height="32" fill="#D4A520" rx="1"/><rect x="18" y="-28" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="24" y="-28" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="18" y="-22" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="24" y="-22" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="18" y="-16" width="3" height="3" fill="#0d0d6e" rx="0.5"/><rect x="24" y="-16" width="3" height="3" fill="#0d0d6e" rx="0.5"/>
+          <rect x="-48" y="-20" width="12" height="20" fill="#B8860B" rx="1"/><rect x="36" y="-22" width="12" height="22" fill="#B8860B" rx="1"/>
+          <line x1="-60" y1="0" x2="60" y2="0" stroke="#FFD700" stroke-width="1.5" opacity="0.6"/>
+        </g>
+        <g transform="translate(680,100)" opacity="0.2"><circle cx="0" cy="0" r="28" fill="none" stroke="#FFD700" stroke-width="1"/><line x1="0" y1="-24" x2="0" y2="24" stroke="#FFD700" stroke-width="1"/><line x1="-24" y1="0" x2="24" y2="0" stroke="#FFD700" stroke-width="1"/><polygon points="0,-22 4,-6 -4,-6" fill="#FFD700"/><text x="0" y="-30" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#FFD700">N</text></g>
+        <g opacity="0.15" stroke="#FFD700" stroke-width="1.5"><polyline points="30,30 30,60" fill="none"/><polyline points="30,30 60,30" fill="none"/><polyline points="770,30 770,60" fill="none"/><polyline points="770,30 740,30" fill="none"/><polyline points="30,470 30,440" fill="none"/><polyline points="30,470 60,470" fill="none"/><polyline points="770,470 770,440" fill="none"/><polyline points="770,470 740,470" fill="none"/></g>
+        <text x="400" y="420" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="16" letter-spacing="6" fill="#8899cc" opacity="0.8">PLANNING SERVICES EDITION</text>
+        <rect x="200" y="440" width="400" height="3" rx="1.5" fill="url(#goldGrad)" opacity="0.6"/>
+        <g opacity="0.3" fill="#FFD700"><circle cx="95" cy="78" r="1.2"/><circle cx="710" cy="420" r="1"/><circle cx="150" cy="430" r="1.5"/><circle cx="650" cy="72" r="1.3"/><circle cx="85" cy="340" r="1"/><circle cx="730" cy="280" r="1.2"/><circle cx="55" cy="190" r="0.8"/><circle cx="750" cy="180" r="1"/><circle cx="120" cy="260" r="0.9"/><circle cx="680" cy="350" r="1.1"/></g>
+      </svg>
+    </div>
+    <div class="splash-prompt">Click anywhere to continue</div>
+  </div>
+</div>
+
+<!-- ======== INTRO SCREEN ======== -->
+<div class="intro-screen hidden" id="introScreen">
+  <div class="intro-card">
+    <div class="intro-logo">GZA Jeopardy!</div>
+    <div class="intro-edition">Planning Services Edition</div>
+
+    <div class="intro-rules">
+      <h2>How to Play</h2>
+      <ul>
+        <li>Select any <span class="rule-highlight">dollar value</span> on the board to reveal a clue.</li>
+        <li>Type your answer — start with <span class="rule-highlight">"What is..."</span> or simply enter the key terms. Partial and close matches count!</li>
+        <li>A correct answer adds that dollar amount to your <span class="rule-highlight">score</span>.</li>
+        <li>A wrong answer earns a <span class="rule-highlight">strike</span>. Three strikes and you're out!</li>
+        <li>Clear the entire board to unlock <span class="rule-highlight">Final Jeopardy</span> — wager part of your winnings on one last question.</li>
+        <li>Top scores are saved to the <span class="rule-highlight">Leaderboard</span>. Can you take the #1 spot?</li>
+      </ul>
+    </div>
+
+    <div class="name-entry">
+      <label for="playerNameInput">Enter Your Name</label>
+      <input type="text" id="playerNameInput" placeholder="Your name..." maxlength="24" autocomplete="off">
+    </div>
+
+    <button class="btn-start" id="startBtn" onclick="startGame()" disabled>Start Game</button>
+
+    <div class="intro-leaderboard" id="introLB">
+      <h3>Leaderboard</h3>
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+        <tbody id="introLBBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ======== GAME SCREEN ======== -->
+<div class="game-screen" id="gameScreen">
+  <div class="header">
+    <h1>GZA Jeopardy!</h1>
+    <div class="player-name-display">Player: <strong id="playerNameDisplay"></strong></div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="stat">
+      <span class="stat-label">Score</span>
+      <span class="stat-value" id="score">$0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Strikes</span>
+      <div class="strikes-container">
+        <div class="strike" id="strike1"></div>
+        <div class="strike" id="strike2"></div>
+        <div class="strike" id="strike3"></div>
+      </div>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Answered</span>
+      <span class="stat-value" id="answered">0/30</span>
+    </div>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+    <button class="final-jeopardy-btn" id="finalBtn" onclick="openFinalJeopardy()">★ Final Jeopardy ★</button>
+  </div>
+</div>
+
+<!-- Clue Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-category" id="modalCat"></div>
+    <div class="modal-value" id="modalVal"></div>
+    <div class="modal-clue" id="modalClue"></div>
+    <div id="wagerSection" class="wager-area" style="display:none;">
+      <label>Enter your wager (up to your current score):</label>
+      <input type="number" id="wagerInput" min="0" placeholder="$0">
+    </div>
+    <div class="answer-input-area" id="answerArea">
+      <input type="text" id="answerInput" placeholder="What is..." autocomplete="off">
+    </div>
+    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn btn-submit" id="submitBtn" onclick="submitAnswer()">Submit</button>
+      <button class="btn btn-reveal" id="revealBtn" onclick="revealAnswer()" style="display:none;">Show Answer</button>
+    </div>
+    <div class="result-area" id="resultArea"></div>
+    <button class="btn btn-back" id="backBtn" onclick="closeModal()" style="display:none;">Back to Board</button>
+  </div>
+</div>
+
+<!-- Game Over -->
+<div class="game-over-overlay" id="gameOverOverlay">
+  <div class="game-over-modal" id="gameOverModal">
+    <h2 id="gameOverTitle">Game Over</h2>
+    <div class="final-score" id="finalScore"></div>
+    <div class="final-correct" id="finalCorrect"></div>
+    <div class="game-over-lb" id="gameOverLB">
+      <h3>Leaderboard</h3>
+      <table class="lb-table"><thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+      <tbody id="gameOverLBBody"></tbody></table>
+    </div>
+    <button class="btn-restart" onclick="restartGame()">Play Again</button>
+    <button class="btn-restart secondary" onclick="backToIntro()">Main Menu</button>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const categories = [
+  "GZA Planning Services",
+  "Resilience & Climate Adaptation",
+  "Land-Use Alphabet Soup",
+  "Planning Potpourri",
+  "Markets & Clients",
+  "People & Practice"
+];
+
+const clues = [
+  // GZA Planning Services
+  [
+    { value:200, clue:"These state/local review documents evaluate potential environmental effects of proposed actions.", answer:"Environmental Impact Statements (EISs)", keywords:["environmental impact","eis","impact statement","impact report"] },
+    { value:400, clue:"Studies that estimate trips travelled and level-of-service so planning boards can evaluate land use approvals.", answer:"Traffic/Transportation Impact Studies", keywords:["traffic","transportation impact","impact stud","traffic study","traffic impact"] },
+    { value:600, clue:"The mapping and analytics toolset and platform we use to visualize sites, hazards, and scenarios for decisions.", answer:"Geographic Information Systems (GIS)", keywords:["gis","geographic information","geographic info"] },
+    { value:800, clue:"Repositioning land via variances and rezonings to enhance project feasibility falls under this practice area.", answer:"Land Use & Environmental Planning Practice Area", keywords:["land use","environmental planning","practice area","zoning","land use and environmental"] },
+    { value:1000, clue:"On-site oversight that helps ensure permit and environmental conditions are met during building activities.", answer:"Construction Compliance Monitoring", keywords:["construction compliance","compliance monitoring","construction monitor"] }
+  ],
+  // Resilience & Climate Adaptation
+  [
+    { value:200, clue:"FEMA's pre-disaster funding program cited alongside Long Wharf's flood mitigation work.", answer:"BRIC (Building Resilient Infrastructure and Communities)", keywords:["bric","building resilient","resilient infrastructure"] },
+    { value:400, clue:"FEMA's national GIS-based tool that estimates potential losses from hazard/damage.", answer:"HAZUS", keywords:["hazus","haz-us"] },
+    { value:600, clue:"Nature-based shoreline stabilization approach designed for Old Saybrook's Hepburn Dune.", answer:"Living Shoreline", keywords:["living shoreline","living shore"] },
+    { value:800, clue:"Fourteen staff members have this professional designation relevant to waterfront development, which is also a national rating system.", answer:"WEDG (Waterfront Edge Design Guidelines)", keywords:["wedg","waterfront edge","waterfront edge design","waterfront design guidelines"] },
+    { value:1000, clue:'What "superstorm" slammed the east coast and precipitated the launch of a HUD Design Competition and increased federal recognition of coastal resilience?', answer:"Hurricane/Superstorm Sandy", keywords:["sandy","superstorm sandy","hurricane sandy"] }
+  ],
+  // Land-Use Alphabet Soup
+  [
+    { value:200, clue:"NY State program guiding waterfront development and coastal policy at the local level.", answer:"LWRP (Local Waterfront Revitalization Program)", keywords:["lwrp","local waterfront","waterfront revitalization","waterfront program"] },
+    { value:400, clue:"Community-driven planning for brownfields that can unlock targeted reinvestment.", answer:"BOA (Brownfield Opportunity Area)", keywords:["boa","brownfield opportunity","brownfield area"] },
+    { value:600, clue:"What is the acronym for the ratio of building size to lot size.", answer:"FAR (Floor Area Ratio)", keywords:["far","floor area ratio","floor area"] },
+    { value:800, clue:"FEMA-compliant plans that kick off the preparedness–recovery cycle for communities.", answer:"NHMPs (Natural Hazard Mitigation Plans)", keywords:["nhmp","natural hazard mitigation","hazard mitigation plan","mitigation plan"] },
+    { value:1000, clue:"What is the foundational U.S. law requiring federal agencies to assess the environmental impacts of proposed major actions before making decisions.", answer:"NEPA (National Environmental Policy Act)", keywords:["nepa","national environmental policy","environmental policy act"] }
+  ],
+  // Planning Potpourri (unchanged)
+  [
+    { value:200, clue:"This 1916 ordinance in New York City was the first comprehensive zoning resolution in the United States.", answer:"1916 NYC Zoning Resolution", keywords:["1916","zoning resolution","new york","nyc zoning"] },
+    { value:400, clue:"Signed in 1970, this landmark federal law requires environmental impact statements for major federal actions.", answer:"National Environmental Policy Act (NEPA)", keywords:["nepa","national environmental policy","environmental policy act"] },
+    { value:600, clue:"This influential 1961 book by Jane Jacobs challenged modernist urban planning orthodoxy and championed mixed-use, walkable neighborhoods.", answer:"The Death and Life of Great American Cities", keywords:["death and life","great american cities","jane jacobs"] },
+    { value:800, clue:"These two landscape architects designed the 'Greensward Plan,' the winning master plan for New York's Central Park in 1858.", answer:"Frederick Law Olmsted and Calvert Vaux", keywords:["olmsted","vaux","frederick law olmsted","calvert vaux","greensward"] },
+    { value:1000, clue:"This 1987 Supreme Court decision established the 'essential nexus' test requiring a direct connection between a government exaction and the impact of a proposed development.", answer:"Nollan v. California Coastal Commission", keywords:["nollan","california coastal","nollan v california","essential nexus"] }
+  ],
+  // Markets & Clients
+  [
+    { value:200, clue:"One of the core markets we 'get' on the Land Use & Environmental Planning page.", answer:"Residential & Commercial Developers, Municipalities & Government Agencies, Infrastructure, Industrial & Manufacturing, or Institutional (any one)", keywords:["residential","commercial","developer","municipalit","government agenc","infrastructure","industrial","manufacturing","institutional"], anyN:1 },
+    { value:400, clue:"These public-sector clients rely on GZA for mitigation planning and resilience work.", answer:"Municipalities, counties, and state agencies", keywords:["municipalit","count","state agenc","government","public sector","counties"] },
+    { value:600, clue:"Global beauty brand listed in our sustainability/resilience project spotlights.", answer:"L'Oréal", keywords:["loreal","l'oreal","l'oréal","oreal"] },
+    { value:800, clue:"NJ convenience chain highlighted as a long-time real estate client in a local industry feature.", answer:"QuickChek", keywords:["quickchek","quick chek","quickcheck","quick check"] },
+    { value:1000, clue:'Owners and operators in this "vital" sector are explicit targets for hazard-risk services, like power, water, and communications networks.', answer:"Critical Infrastructure", keywords:["critical infrastructure","critical infra"] }
+  ],
+  // People & Practice
+  [
+    { value:200, clue:"AICP/PP who leads Land Use & Environmental Planning; contact on the services page.", answer:"Kevin Williams", keywords:["kevin williams","kevin","williams"] },
+    { value:400, clue:"Principal who heads Natural Hazard Risk Management & Climate Adaptation.", answer:"David M. Leone", keywords:["david","leone","david leone"] },
+    { value:600, clue:"2023 acquisition that expanded our Mid-Atlantic urban planning resources.", answer:"Equity Environmental Engineering", keywords:["equity environmental","equity engineer","equity env"] },
+    { value:800, clue:"In what office does the majority of the planning team sit.", answer:"Manhattan", keywords:["manhattan","new york","nyc","new york city"] },
+    { value:1000, clue:"GZA's President & CEO quoted on our strengths in natural-hazard consulting.", answer:"Patrick Sheehan", keywords:["patrick sheehan","sheehan","patrick"] }
+  ]
+];
+
+const finalJeopardy = {
+  category:"Urban Coastal Resilience",
+  clue:"Who is the American landscape architect and journalist widely regarded as the founder of American landscape architecture — best known for designing iconic public spaces like Central Park in New York City, the U.S. Capitol grounds, the Biltmore Estate, and Boston's 'Emerald Necklace.'",
+  answer:"Frederick Law Olmsted",
+  keywords:["olmsted","frederick law olmsted","frederick olmsted"]
+};
+
+// ===================== STATE =====================
+let playerName = '';
+let score = 0;
+let strikes = 0;
+let answeredCount = 0;
+let correctCount = 0;
+let currentClue = null;
+let isFinalJeopardy = false;
+let gameOver = false;
+let currentGameId = null;
+const usedCells = new Set();
+
+// ===================== LEADERBOARD =====================
+function getLeaderboard() {
+  try { return JSON.parse(localStorage.getItem('gza_jeopardy_lb') || '[]'); } catch { return []; }
+}
+function saveLeaderboard(lb) {
+  try { localStorage.setItem('gza_jeopardy_lb', JSON.stringify(lb)); } catch {}
+}
+function addToLeaderboard(name, finalScore, correct, total) {
+  const lb = getLeaderboard();
+  const id = Date.now().toString(36);
+  lb.push({ id, name, score: finalScore, correct, total, date: new Date().toLocaleDateString() });
+  lb.sort((a,b) => b.score - a.score);
+  if (lb.length > 15) lb.length = 15;
+  saveLeaderboard(lb);
+  currentGameId = id;
+  return lb;
+}
+function renderLeaderboard(tbodyId, highlightId) {
+  const lb = getLeaderboard();
+  const tbody = document.getElementById(tbodyId);
+  if (!lb.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="lb-empty">No scores yet — be the first!</td></tr>';
+    return;
+  }
+  const rankClass = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+  tbody.innerHTML = lb.slice(0, 10).map((e, i) =>
+    `<tr class="${highlightId && e.id === highlightId ? 'lb-you' : ''}">` +
+    `<td class="lb-rank ${rankClass(i)}">${i+1}</td>` +
+    `<td>${esc(e.name)}${highlightId && e.id === highlightId ? ' ◀' : ''}</td>` +
+    `<td>$${e.score.toLocaleString()}</td></tr>`
+  ).join('');
+}
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+// ===================== FUZZY MATCHING =====================
+function normalize(s) {
+  return s.toLowerCase()
+    .replace(/what is\s*/i, '')
+    .replace(/what are\s*/i, '')
+    .replace(/who is\s*/i, '')
+    .replace(/who are\s*/i, '')
+    .replace(/['']/g, "'")
+    .replace(/[^a-z0-9' ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  const d = Array.from({length: m+1}, (_,i) => [i]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      d[i][j] = a[i-1]===b[j-1] ? d[i-1][j-1] : 1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+  return d[m][n];
+}
+
+function fuzzyWordMatch(inputWord, targetWord) {
+  if (inputWord === targetWord) return true;
+  if (targetWord.includes(inputWord) || inputWord.includes(targetWord)) return true;
+  // Allow typos based on word length
+  const maxDist = inputWord.length <= 3 ? 0 : inputWord.length <= 5 ? 1 : inputWord.length <= 8 ? 2 : 3;
+  return levenshtein(inputWord, targetWord) <= maxDist;
+}
+
+function fuzzyContains(haystack, needle) {
+  if (haystack.includes(needle)) return true;
+  const hWords = haystack.split(' ');
+  const nWords = needle.split(' ').filter(w => w.length >= 2);
+  if (!nWords.length) return false;
+  let matched = 0;
+  for (const nw of nWords) {
+    for (const hw of hWords) {
+      if (fuzzyWordMatch(nw, hw)) { matched++; break; }
+    }
+  }
+  // Pass if 60%+ of needle words match
+  return matched >= Math.ceil(nWords.length * 0.6);
+}
+
+function checkAnswer(input, clueData) {
+  const clean = normalize(input);
+  if (clean.length < 2) return false;
+
+  const keywords = clueData.keywords;
+  const anyN = clueData.anyN || null;
+
+  let matchCount = 0;
+  for (const kw of keywords) {
+    const nkw = normalize(kw);
+    if (fuzzyContains(clean, nkw)) matchCount++;
+  }
+
+  if (anyN) return matchCount >= anyN;
+  if (matchCount > 0) return true;
+
+  // Fallback: check whole answer fuzzy
+  const normAnswer = normalize(clueData.answer);
+  const ansWords = normAnswer.split(' ').filter(w => w.length >= 3);
+  const inputWords = clean.split(' ').filter(w => w.length >= 2);
+  let wordHits = 0;
+  for (const aw of ansWords) {
+    for (const iw of inputWords) {
+      if (fuzzyWordMatch(iw, aw)) { wordHits++; break; }
+    }
+  }
+  return ansWords.length > 0 && wordHits >= Math.ceil(ansWords.length * 0.45);
+}
+
+// ===================== INTRO & START =====================
+const nameInput = document.getElementById('playerNameInput');
+const startBtn = document.getElementById('startBtn');
+nameInput.addEventListener('input', () => { startBtn.disabled = !nameInput.value.trim(); });
+nameInput.addEventListener('keydown', e => { if (e.key==='Enter' && nameInput.value.trim()) startGame(); });
+
+function startGame() {
+  playerName = nameInput.value.trim();
+  if (!playerName) return;
+  document.getElementById('introScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.add('active');
+  document.getElementById('playerNameDisplay').textContent = playerName;
+  resetGameState();
+  buildBoard();
+  updateUI();
+}
+
+function resetGameState() {
+  score=0; strikes=0; answeredCount=0; correctCount=0;
+  gameOver=false; isFinalJeopardy=false; currentGameId=null;
+  usedCells.clear();
+  document.getElementById('finalBtn').classList.remove('show');
+}
+
+// ===================== BOARD =====================
+function buildBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  categories.forEach(cat => {
+    const d=document.createElement('div'); d.className='cat-header'; d.textContent=cat; board.appendChild(d);
+  });
+  for (let row=0;row<5;row++) {
+    for (let col=0;col<6;col++) {
+      const c=clues[col][row];
+      const d=document.createElement('div');
+      d.className='cell'; d.id=`cell-${col}-${row}`;
+      d.textContent=`$${c.value}`;
+      d.onclick=()=>openClue(col,row);
+      board.appendChild(d);
+    }
+  }
+}
+
+function updateUI() {
+  document.getElementById('score').textContent=`$${score.toLocaleString()}`;
+  document.getElementById('answered').textContent=`${answeredCount}/30`;
+  for(let i=1;i<=3;i++)
+    document.getElementById(`strike${i}`).className=i<=strikes?'strike active':'strike';
+  if(answeredCount>=30&&!gameOver) document.getElementById('finalBtn').classList.add('show');
+}
+
+// ===================== CLUE MODAL =====================
+function openClue(col,row) {
+  if(usedCells.has(`${col}-${row}`)||gameOver) return;
+  currentClue={col,row,...clues[col][row]};
+  isFinalJeopardy=false;
+  document.getElementById('modalCat').textContent=categories[col];
+  document.getElementById('modalVal').textContent=`$${clues[col][row].value}`;
+  document.getElementById('modalClue').textContent=clues[col][row].clue;
+  document.getElementById('wagerSection').style.display='none';
+  resetModal();
+  document.getElementById('overlay').classList.add('active');
+  setTimeout(()=>document.getElementById('answerInput').focus(),300);
+}
+
+function openFinalJeopardy() {
+  if(gameOver) return;
+  isFinalJeopardy=true;
+  currentClue=finalJeopardy;
+  document.getElementById('modalCat').textContent='Final Jeopardy — '+finalJeopardy.category;
+  document.getElementById('modalVal').textContent='';
+  document.getElementById('modalClue').textContent=finalJeopardy.clue;
+  document.getElementById('wagerSection').style.display='block';
+  const wi=document.getElementById('wagerInput');
+  wi.max=Math.max(score,0); wi.value='';
+  resetModal();
+  document.getElementById('overlay').classList.add('active');
+  setTimeout(()=>wi.focus(),300);
+}
+
+function resetModal() {
+  document.getElementById('answerInput').value='';
+  document.getElementById('answerInput').disabled=false;
+  document.getElementById('resultArea').innerHTML='';
+  document.getElementById('submitBtn').style.display='';
+  document.getElementById('revealBtn').style.display='none';
+  document.getElementById('backBtn').style.display='none';
+  document.getElementById('answerArea').style.display='';
+}
+
+function submitAnswer() {
+  const input=document.getElementById('answerInput').value.trim();
+  if(!input) return;
+
+  let wager=0;
+  if(isFinalJeopardy) {
+    wager=parseInt(document.getElementById('wagerInput').value)||0;
+    wager=Math.max(0,Math.min(wager,Math.max(score,0)));
+  }
+
+  const correct=checkAnswer(input,currentClue);
+  const resultArea=document.getElementById('resultArea');
+
+  document.getElementById('answerInput').disabled=true;
+  document.getElementById('submitBtn').style.display='none';
+  document.getElementById('backBtn').style.display='';
+
+  if(correct) {
+    const pts=isFinalJeopardy?wager:currentClue.value;
+    score+=pts; correctCount++;
+    resultArea.innerHTML=`<div class="result-text correct">✓ Correct! +$${pts.toLocaleString()}</div>`;
+  } else {
+    if(isFinalJeopardy) score-=wager;
+    if(!isFinalJeopardy) strikes++;
+    resultArea.innerHTML=`<div class="result-text wrong">✕ Incorrect${!isFinalJeopardy?` — Strike ${strikes}/3`:''}</div>`;
+    document.getElementById('revealBtn').style.display='';
+  }
+
+  if(!isFinalJeopardy) {
+    usedCells.add(`${currentClue.col}-${currentClue.row}`);
+    document.getElementById(`cell-${currentClue.col}-${currentClue.row}`).classList.add('used');
+    answeredCount++;
+  }
+
+  updateUI();
+
+  if(strikes>=3) setTimeout(()=>{closeModal();endGame(false);},1400);
+  else if(isFinalJeopardy) setTimeout(()=>{closeModal();endGame(true);},1800);
+}
+
+function revealAnswer() {
+  document.getElementById('resultArea').innerHTML+=`<div class="correct-answer">${currentClue.answer}</div>`;
+  document.getElementById('revealBtn').style.display='none';
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('active'); }
+
+// ===================== GAME OVER =====================
+function endGame(completed) {
+  gameOver=true;
+  addToLeaderboard(playerName,score,correctCount,answeredCount);
+  renderLeaderboard('gameOverLBBody',currentGameId);
+
+  const modal=document.getElementById('gameOverModal');
+  const title=document.getElementById('gameOverTitle');
+
+  if(completed) {
+    modal.classList.add('winner');
+    title.textContent='🏆 Final Score!';
+  } else {
+    modal.classList.remove('winner');
+    title.textContent='Game Over — 3 Strikes!';
+  }
+  document.getElementById('finalScore').textContent=`$${score.toLocaleString()}`;
+  document.getElementById('finalCorrect').textContent=`${correctCount} correct out of ${answeredCount} answered`;
+  document.getElementById('gameOverOverlay').classList.add('active');
+}
+
+function restartGame() {
+  document.getElementById('gameOverOverlay').classList.remove('active');
+  resetGameState(); buildBoard(); updateUI();
+}
+
+function backToIntro() {
+  document.getElementById('gameOverOverlay').classList.remove('active');
+  document.getElementById('gameScreen').classList.remove('active');
+  document.getElementById('introScreen').classList.remove('hidden');
+  nameInput.value=playerName; startBtn.disabled=false;
+  renderLeaderboard('introLBBody');
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('overlay').classList.contains('active')) {
+    if(document.getElementById('submitBtn').style.display!=='none') submitAnswer();
+    else if(document.getElementById('backBtn').style.display!=='none') closeModal();
+  }
+});
+
+// Splash screen
+document.getElementById('splashScreen').addEventListener('click', () => {
+  document.getElementById('splashScreen').classList.add('hidden');
+  document.getElementById('introScreen').classList.remove('hidden');
+  document.getElementById('playerNameInput').focus();
+});
+
+// Init
+renderLeaderboard('introLBBody');
+</script>
+</body>
+</html>
